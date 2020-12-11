@@ -14,8 +14,8 @@ def CreateRDTMessage(SYN=False, FIN=False, ACK=False, SEQ=0, SEQ_ACK=0, LEN=0, C
     :param Payload: Payload  str
     :return: a binary message
     '''
-    Payload_Length = len(Payload)
-    fmt = "<3?3ih%ds" % Payload_Length
+    LEN = len(Payload)
+    fmt = "<3?3ih%ds" % LEN
     Payload = bytes(Payload.encode())
     return struct.pack(fmt, SYN, FIN, ACK, SEQ, SEQ_ACK, LEN, CHECKSUM, Payload)
 
