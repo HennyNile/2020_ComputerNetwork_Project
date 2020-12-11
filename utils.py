@@ -1,7 +1,7 @@
 # Functions used in this project
 import struct
 
-def CreateRDTMessage(SYN=False, FIN=False, ACK=False, SEQ=0, SEQ_ACK=0, LEN=0, CHECKSUM=0, Payload="hello"):
+def CreateRDTMessage(SYN=False, FIN=False, ACK=False, SEQ=0, SEQ_ACK=0, CHECKSUM=0, Payload="hello"):
     '''(bool,bool,bool,integer,integer,integer,short,str)->Message
     Create a message and return it
     :param SYN:  Flag  1 bit
