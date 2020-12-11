@@ -23,5 +23,8 @@ def CreateRDTMessage(SYN=False, FIN=False, ACK=False, SEQ=0, SEQ_ACK=0, CHECKSUM
 if __name__ == "__main__":
     # test of CreateRdtMessage
     payload = "Oh! My little James!"
-    fmt = "<3?3ih%ds" % len(payload)
-    print(struct.unpack(fmt, CreateRDTMessage(Payload=payload)))
+    message = CreateRDTMessage(payload)
+    message_len = len(message)
+    payload_len = message_len - 17
+    fmt = "<3?3ih%ds" % payload_len
+    print(struct.unpack(fmt, message))
