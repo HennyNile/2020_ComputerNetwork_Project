@@ -30,7 +30,7 @@ class RDTSocket(UnreliableSocket):
         #                             END OF YOUR CODE                              #
         #############################################################################
 
-    def accept(self)->(RDTSocket, (str, int)):
+    def accept(self)->("RDTSocket", (str, int)):
         """
         Accept a connection. The socket must be bound to an address and listening for 
         connections. The return value is a pair (conn, address) where conn is a new 
