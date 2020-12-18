@@ -1,7 +1,40 @@
 # Functions used in this project
 import struct
 
+<<<<<<< Updated upstream
 def CreateRDTMessage(SYN=False, FIN=False, ACK=False, SEQ=0, SEQ_ACK=0, CHECKSUM=0, Payload="hello"):
+=======
+def getCheckSum(package):
+    '''(message)->checkSum
+    Chunk into 16-bit block
+    Add up
+    Circulate to maintain 16 bits
+    Obtain 1s complement
+    :return: 16-bit checkSum
+    :usage: Generate checkSum, verify checkSum(return 0 if correct)
+    '''
+    sum = 0x0
+    for i in range(0,len(package),2):
+        if len(package)<i+2:
+            a=b'\x00'+package[i:]
+            value = int.from_bytes(a,byteorder='little',signed=False)
+            sum += int.from_bytes(a,byteorder='little',signed=False)
+        else:
+            a=package[i:i+2]
+            value = int.from_bytes(package[i:i+2],byteorder='little',signed=False)
+            sum += int.from_bytes(package[i:i+2],byteorder='little',signed=False)
+    while sum > 65535:
+        high = sum >>16
+        sum &= 0xffff
+        sum += high
+    # print(hex(sum))
+    sum = sum ^ 0xffff
+    # print(hex(sum))
+    return sum
+
+
+def CreateRDTMessage(SYN=False, FIN=False, ACK=False, SEQ=0, SEQ_ACK=0, Payload=''):
+>>>>>>> Stashed changes
     '''(bool,bool,bool,integer,integer,integer,short,str)->Message
     Create a message and return it
     :param SYN:  Flag  1 bit
@@ -22,9 +55,22 @@ def CreateRDTMessage(SYN=False, FIN=False, ACK=False, SEQ=0, SEQ_ACK=0, CHECKSUM
 
 if __name__ == "__main__":
     # test of CreateRdtMessage
+<<<<<<< Updated upstream
     payload = "Oh! My little James!"
     message = CreateRDTMessage(payload)
     message_len = len(message)
     payload_len = message_len - 17
     fmt = "<3?3ih%ds" % payload_len
     print(struct.unpack(fmt, message))
+=======
+    payload = "?????"
+    message = CreateRDTMessage(True,False,False,1,1,Payload="")
+    print("Pack:", message)
+    a = getCheckSum(message)
+    print(a)
+    # print("Pack type:",type(message))
+    # print("Pack int",int.from_bytes(message,byteorder='little',signed=False))
+    unpack = UnpackRDTMessage(message)
+    print(unpack[0:3] == (True, False, False))
+    print("Unpack:",unpack)
+>>>>>>> Stashed changes
