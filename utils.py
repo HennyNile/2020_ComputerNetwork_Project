@@ -21,7 +21,7 @@ def getCheckSum(package):
             value = int.from_bytes(package[i:i+2],byteorder='little',signed=False)
             sum += int.from_bytes(package[i:i+2],byteorder='little',signed=False)
     while sum > 65535:
-        high = sum >> 16
+        high = sum >>16
         sum &= 0xffff
         sum += high
     # print(hex(sum))
@@ -63,12 +63,13 @@ def UnpackRDTMessage(message):
 
 if __name__ == "__main__":
     # test of CreateRdtMessage
-    payload = "127.0.0.1,12222"
-    message = CreateRDTMessage(True,True,True,1,1,Payload=payload)
-    print("Pack:",message)
+    payload = "?????"
+    message = CreateRDTMessage(True,False,False,1,1,Payload="")
+    print("Pack:", message)
     a = getCheckSum(message)
     print(a)
     # print("Pack type:",type(message))
     # print("Pack int",int.from_bytes(message,byteorder='little',signed=False))
     unpack = UnpackRDTMessage(message)
+    print(unpack[0:3] == (True, False, False))
     print("Unpack:",unpack)
