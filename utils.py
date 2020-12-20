@@ -44,9 +44,12 @@ def CreateRDTMessage(SYN=False, FIN=False, ACK=False, SEQ=0, SEQ_ACK=0, Payload=
     :return: a binary message
     '''
     LEN = len(Payload)
-    fmt = "<3?3ih%ds" % LEN
+    BLANK = False
+    fmt = "<4?3iH%ds" % LEN
     Payload = bytes(Payload.encode())
-    return struct.pack(fmt, SYN, FIN, ACK, SEQ, SEQ_ACK, LEN, CHECKSUM, Payload)
+    package = struct.pack(fmt, SYN, FIN, ACK, BLANK, SEQ, SEQ_ACK, LEN, 0, Payload)
+    CheckSum = getCheckSum(package)
+    return struct.pack(fmt, SYN, FIN, ACK, BLANK, SEQ, SEQ_ACK, LEN, CheckSum, Payload)
 
 def UnpackRDTMessage(message):
     message_len = len(message)
