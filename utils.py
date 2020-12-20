@@ -1,9 +1,6 @@
 # Functions used in this project
 import struct
 
-<<<<<<< Updated upstream
-def CreateRDTMessage(SYN=False, FIN=False, ACK=False, SEQ=0, SEQ_ACK=0, CHECKSUM=0, Payload="hello"):
-=======
 def getCheckSum(package):
     '''(message)->checkSum
     Chunk into 16-bit block
@@ -34,7 +31,6 @@ def getCheckSum(package):
 
 
 def CreateRDTMessage(SYN=False, FIN=False, ACK=False, SEQ=0, SEQ_ACK=0, Payload=''):
->>>>>>> Stashed changes
     '''(bool,bool,bool,integer,integer,integer,short,str)->Message
     Create a message and return it
     :param SYN:  Flag  1 bit
@@ -52,17 +48,15 @@ def CreateRDTMessage(SYN=False, FIN=False, ACK=False, SEQ=0, SEQ_ACK=0, Payload=
     Payload = bytes(Payload.encode())
     return struct.pack(fmt, SYN, FIN, ACK, SEQ, SEQ_ACK, LEN, CHECKSUM, Payload)
 
+def UnpackRDTMessage(message):
+    message_len = len(message)
+    payload_len = message_len - 18
+    fmt = "<4?3iH%ds" % payload_len
+    return struct.unpack(fmt, message)
+
 
 if __name__ == "__main__":
     # test of CreateRdtMessage
-<<<<<<< Updated upstream
-    payload = "Oh! My little James!"
-    message = CreateRDTMessage(payload)
-    message_len = len(message)
-    payload_len = message_len - 17
-    fmt = "<3?3ih%ds" % payload_len
-    print(struct.unpack(fmt, message))
-=======
     payload = "?????"
     message = CreateRDTMessage(True,False,False,1,1,Payload="")
     print("Pack:", message)
@@ -73,4 +67,3 @@ if __name__ == "__main__":
     unpack = UnpackRDTMessage(message)
     print(unpack[0:3] == (True, False, False))
     print("Unpack:",unpack)
->>>>>>> Stashed changes
