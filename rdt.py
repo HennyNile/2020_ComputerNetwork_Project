@@ -1,4 +1,7 @@
 from CN_rdt.USocket import UnreliableSocket
+import CN_rdt.utils as utils
+import threading
+from CN_rdt.USocket import UnreliableSocket
 import CN_rdt.USocket as USocket
 import CN_rdt.utils as utils
 import socket
@@ -22,6 +25,14 @@ fin_ack_h = (False, False, True)  # ACK for fin_sent
 states = (
 'LISTEN', 'SYN_SENT', 'SYN_RECV', 'ESTAB', 'FIN_WAIT_1', 'FIN_WAIT_2', 'TIMED_WAIT', 'CLOSED', 'CLOSE_WAIT', 'LAST_ACK')
 
+class recvThreading(threading.Thread):
+    def __init__(self,rdt):
+        threading.Thread.__init__(self)
+        self.buffer =  None
+        self.rdt = rdt
+
+    def run(self):
+        self.buffer = self.rdt.recv(4096)
 
 def check_package(package, package_type):
     # package_type
@@ -44,7 +55,8 @@ def check_package(package, package_type):
     if package_type == 2 and not package_msg[0:3] == est_conn_h:
         print("+++EST_CONN Failed\n+++Invalid package: Wrong header!")
         return False
-    if package_type == 3:
+    if package_type == 3 and not package_msg[0:3] == est_conn_h:
+        print("+++EST_CONN Failed\n+++Invalid package: Wrong header!")
         return False
     if package_type == 4 and not package_msg[0:3] == fin_sent_h:
         print("+++FIN_SENT Failed\n+++Invalid package: Wrong header!")
@@ -59,6 +71,7 @@ def check_package(package, package_type):
         print("+++Invalid package type:", package_type)
         return False
     return True
+
 
 
 class RDTSocket(UnreliableSocket):
@@ -94,6 +107,14 @@ class RDTSocket(UnreliableSocket):
         self.state = 'CLOSED'
         self.send_buffer = []
         self.recv_buffer = []
+        self.maxwinsize = 5
+        self.maxmessagelen = 3000
+        self.timeout = 2
+        # self.senderwindow = [0 for _ in range(self.winsize)]
+        # self.senderbuffer = [0 for _ in range(self.winsize)]
+        # self.recvwindow = [0 for  _ in range(self.winsize)]
+        # self.recvbuffer = [0 for _ in range(self.winsize)]
+
         #############################################################################
         #                             END OF YOUR CODE                              #
         #############################################################################
@@ -264,6 +285,12 @@ class RDTSocket(UnreliableSocket):
             USocket.sockets[id(super)].shutdown(socket.SHUT_RDWR)
             super().close()
             data = None
+        #    temdata, addr = self.recvfrom(bufsize=bufsize)
+        #
+        # if check_package(temdata,3):
+        #     data = temdata
+        # else:
+        #     self.recv()
         #############################################################################
         #                             END OF YOUR CODE                              #
         #############################################################################
@@ -279,7 +306,58 @@ class RDTSocket(UnreliableSocket):
         #############################################################################
         # TODO: YOUR CODE HERE                                                      #
         #############################################################################
-        self.sendto(bytes, self.dest_addr)
+        message = utils.UnpackRDTMessage(bytes)[8]
+        message_len = len(message)
+        package_num = message_len/self.message_maxlen + 1
+        winsize = 0
+        if package_num<self.maxwinsize:
+            winsize = package_num
+        else:
+            winsize = self.maxwinsize
+        winflag = [0 for i in range(winsize)]
+        win_left_position = 0
+        win_right_position = 0
+        SetTimerFlag = 0
+        time = 0
+        while True:
+            thread = recvThreading(self)
+            if win_right_position - win_left_position < winsize and win_left_position < package_num:
+                pac_msg_len = 0
+                package_message = 0
+                if (message_len - win_right_position*self.maxmessagelen)<self.maxmessagelen:
+                    pac_msg_len = message_len - win_right_position*self.maxmessagelen
+                else:
+                    pac_msg_len = self.maxmessagelen
+                package_message = message[win_right_position*self.maxmessagelen:win_right_position*self.maxmessagelen+pac_msg_len].decode()
+                package = utils.CreateRDTMessage(SYN = est_conn_h[0],FIN=est_conn_h[1],ACK = est_conn_h[2],SEQ=win_right_position*self.maxmessagelen,SEQ_ACK=0,Payload=package_message)
+                self.sendto(package,self.dest_addr)
+                win_right_position += 1
+                if not SetTimerFlag:
+                    SetTimerFlag = 1
+                    time = time.time()
+                    thread.start()
+                    thread.run()
+            else:
+                if time.time() - time < self.timeout:
+                    if thread.buffer is None:
+                        pass
+                    else:
+                        message = thread.buffer
+
+                else:
+                    package_message = message[
+                                      win_left_position * self.maxmessagelen:win_left_position * self.maxmessagelen + pac_msg_len].decode()
+                    package = utils.CreateRDTMessage(SYN=est_conn_h[0], FIN=est_conn_h[1], ACK=est_conn_h[2],
+                                                     SEQ=win_left_position * self.maxmessagelen, SEQ_ACK=0,
+                                                     Payload=package_message)
+                    self.sendto(package, self.dest_addr)
+
+
+
+
+
+
+        self.sendto(bytes,self.dest_addr)
         #############################################################################
         #                             END OF YOUR CODE                              #
         #############################################################################
