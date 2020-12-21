@@ -13,13 +13,15 @@ class socketThreading(threading.Thread):
         self.conn = conn
 
     def run(self):
-        socketCommunicate(conn,id);
+        socketCommunicate(conn,id)
+        conn.close()
 
 def socketCommunicate(conn,thread_id):
     while True:
         data = conn.recv(1024)
         print("Socket",thread_id,"Received:", UnpackRDTMessage(data)[8].decode())
         if not data: break
+        if UnpackRDTMessage(data)[8].decode()=="close": break
     # conn.sendall(data)
 
 

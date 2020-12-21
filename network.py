@@ -62,7 +62,8 @@ class Server(ThreadingUDPServer):
         to = bytes_to_addr(data[:8])
         print(client_address, to) # observe tht traffic
         socket.sendto(addr_to_bytes(client_address) + data[8:], to)
-    
+
+
 server_address = ('127.0.0.1', 12345)
 
 if __name__ == '__main__':

@@ -1,6 +1,6 @@
 # Echo server program
-from rdt import RDTSocket
-from utils import CreateRDTMessage,UnpackRDTMessage
+from CN_rdt.rdt import RDTSocket
+from CN_rdt.utils import CreateRDTMessage,UnpackRDTMessage
 
 
 client_addr = ('127.0.0.1',13001)         # Symbolic name meaning all available interfaces
@@ -12,7 +12,7 @@ with RDTSocket() as s:
     if s.connect(server_addr):
         print("Connect_socket",s.dest_addr)
         while True:
-            t_message = input();
+            t_message = input()
             print("sending message:",t_message)
             if t_message == "exit": break
             if t_message == "close": s.close()
