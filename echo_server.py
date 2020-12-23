@@ -19,9 +19,11 @@ class socketThreading(threading.Thread):
 def socketCommunicate(conn,thread_id):
     while True:
         data = conn.recv(1024)
-        print("Socket",thread_id,"Received:", UnpackRDTMessage(data)[8].decode())
+        # print("Socket",thread_id,"Received:", UnpackRDTMessage(data)[8].decode())
+        print("Socket", thread_id, "Received:", data)
         if not data: break
-        if UnpackRDTMessage(data)[8].decode()=="close": break
+        # if UnpackRDTMessage(data)[8].decode()=="close":
+        #     conn.close()
     # conn.sendall(data)
 
 
@@ -35,6 +37,6 @@ with RDTSocket() as s:
         conn,addr = s.accept()
         print('Connected by', addr)
         print("new sock is", conn.getsockname())
-        thread = socketThreading(id,conn)
+        thread = socketThreading(conn,id)
         thread.start()
         id += 1
