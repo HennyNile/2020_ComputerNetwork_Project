@@ -47,7 +47,7 @@ class recvThreading(threading.Thread):
         self.rdt = rdt
 
     def run(self):
-        self.buffer = self.rdt.recv(4096)
+        self.buffer = self.rdt.recv(1096)
 
     # Get duplicate pkg, set; Else, ignore
     def run_dup_tect(self, dup_pkg):
@@ -63,6 +63,8 @@ class Package(object):
             return True
         else:
             return self.pkg[seq_h] < other.pkg[seq_h]
+    def getPkg(self):
+        return self.pkg
 
 
 def check_package(package, package_type):
@@ -203,6 +205,7 @@ class RDTSocket(UnreliableSocket):
         syn_recv = utils.CreateRDTMessage(SYN=syn_recv_h[0], FIN=syn_recv_h[1], ACK=syn_recv_h[2], FG=False, FF=False, LF=False, SEQ=self.seq,
                                           SEQ_ACK=self.seq_ack, ID=self.id_cnt, Payload=newsockaddr)
         self.id_cnt += 1
+        self.seq_next = self.seq+1
         # print(syn_recv)
         # print("test1")
         self.sendto(syn_recv,self.dest_addr)
@@ -219,11 +222,11 @@ class RDTSocket(UnreliableSocket):
         if not check_package(est_conn, 2):
             self.dest_addr = None
             return conn, addr
-        if not est_conn_upk[seq_ack_h] == self.seq + 1:
+        if not est_conn_upk[seq_ack_h] == self.seq_next:
             print("+++EST_CONN Failed\n+++Invalid package: Wrong seq_ack!")
             self.dest_addr = None
             return conn, addr
-        self.seq += 1
+        self.seq = self.seq_next
         self.seq_ack = est_conn_upk[seq_h] + 1
         print("3.Connection established.")
 
@@ -232,6 +235,9 @@ class RDTSocket(UnreliableSocket):
         conn.dest_addr = self.dest_addr
         conn._send_to = conn.sendto
         conn._recv_from = conn.recvfrom
+        conn.seq = self.seq
+        conn.seq_next = self.seq_next
+        conn.seq_ack = self.seq_ack
         self.dest_addr = None
         #############################################################################
         #                             END OF YOUR CODE                              #
@@ -253,6 +259,7 @@ class RDTSocket(UnreliableSocket):
         syn_sent = utils.CreateRDTMessage(syn_sent_h[0], syn_sent_h[1], syn_sent_h[1], SEQ=self.seq, SEQ_ACK=0,ID=self.id_cnt,
                                           Payload='')
         self.id_cnt += 1
+        self.seq_next = self.seq +1
         self.dest_addr = address
         self.sendto(syn_sent,address)
         print("1.SYN_SENT is sent.")
@@ -267,22 +274,23 @@ class RDTSocket(UnreliableSocket):
             self._send_to = None
             return False
         syn_recv_upk = utils.UnpackRDTMessage(syn_recv)
-        if not syn_recv_upk[seq_ack_h] == self.seq + 1:
+        if not syn_recv_upk[seq_ack_h] == self.seq_next:
             print("+++SYN_RECV Failed\n+++Invalid package: Wrong seq_ack!")
             self.dest_addr = None
             self._send_to = None
             self._recv_from = None
             return False
-        self.seq += 1
+        self.seq = self.seq_next
         self.seq_ack = syn_recv_upk[seq_h] + 1
         newsockaddr = syn_recv_upk[payload_h].decode().split(',')
         newsockaddr = (newsockaddr[0], int(newsockaddr[1]))
         print("2.SYN_RECV is right.")
 
-        # ESTABLISH CONNECTION
+        # ESTABLISH CONNECTION, pure ack
         est_conn = utils.CreateRDTMessage(est_conn_h[0], est_conn_h[1], est_conn_h[2], SEQ=self.seq,
                                           SEQ_ACK=self.seq_ack, ID=self.id_cnt, Payload='')
         self.id_cnt += 1
+        self.seq_next = self.seq + 1
         self.sendto(est_conn, self.dest_addr)
         self.dest_addr = newsockaddr
         print("Connected!")
@@ -328,9 +336,9 @@ class RDTSocket(UnreliableSocket):
                 break
             return data
         if self.recv_buffer:
-            id = self.recv_buffer[0][id_h]
-            self.cur_recv_id = id
-            if self.recv_id_list[id][0] == 1 and self.recv_id_list[id][1] == 1:
+            pkg_id = self.recv_buffer[0][id_h]
+            self.cur_recv_id = pkg_id
+            if self.recv_id_list[pkg_id][0] == 1 and self.recv_id_list[id][1] == 1:
                 frag_wait = True
         # Get recv
         while not frag_complete:
@@ -360,25 +368,27 @@ class RDTSocket(UnreliableSocket):
                     self.id_cnt += 1
                     self.seq_next = self.seq + 1
                     self.sendto(fin_ack_recv, self.dest_addr)
+                    print("2.FIN_ACK_RECV is sent.")
                     # state: LAST_ACK->CLOSED
                     # recv if not fin_ack, discard and retransmit; recv if fin_ack, release and close
-                    fin_ack, fin_addr = self.recvfrom(4096)
+                    fin_ack, fin_addr = self.recvfrom(bufsize=bufsize)
                     fin_ack_upk = utils.UnpackRDTMessage(fin_ack)
                     while (not fin_addr == self.dest_addr) or fin_ack_upk[0:3] != est_conn_h or (not self.checkSeq(fin_ack_upk)):
                         self.sendto(fin_ack_recv,self.dest_addr)
                         fin_ack, fin_addr = self.recvfrom(bufsize=bufsize)
                         fin_ack_upk = utils.UnpackRDTMessage(fin_ack)
-                    USocket.sockets[id(super)].shutdown(socket.SHUT_RDWR)
+                    # USocket.sockets[id(super())].shutdown(socket.SHUT_RDWR)
                     self._send_to = None
                     self._recv_from = None
                     super().close()
-                    return data
+                    print("3.Service connection closed.")
+                    return None
                 # if self choose to close while getting a duplicate fin_ack from the other end, return fin to close method, let it retransmit
                 else:
                     print("1.FIN_RECV_ACK retransmission is received.")
                     return temp_data
             # recv normal pkg, pure ack, return pkg
-            elif temp_data_upk[syn_h:ack_h+1] == est_conn_h and temp_data_upk[payload] == '':
+            elif temp_data_upk[syn_h:ack_h+1] == est_conn_h and temp_data_upk[payload_h] == b'':
                 print("1.ACK received.")
                 return temp_data
                 # ack does not consume seq, no need to update seq and seq_ack
@@ -392,16 +402,16 @@ class RDTSocket(UnreliableSocket):
                 if len(self.recv_buffer) == 0:
                     # recv data not fragmented, return data, send ack
                     if not temp_data_upk[fg_h]:
-                        data = temp_data
-                        break
+                        return temp_data
+                        # break
                     else:
-                        id = temp_data_upk[id_h]
-                        if self.recv_id_list.get(id) is None:
-                            self.recv_id_list[id] = [-1,-1]
+                        pkg_id = temp_data_upk[id_h]
+                        if self.recv_id_list.get(pkg_id) is None:
+                            self.recv_id_list[pkg_id] = [-1,-1]
                         # recv data fragmented and is 1st fragment
                         if temp_data_upk[ff_h]:
-                            self.recv_id_list[id][0] = 1
-                            self.cur_recv_id = temp_data_upk[id_h]
+                            self.recv_id_list[pkg_id][0] = 1
+                            self.cur_recv_id = pkg_id
                             self.recv_intervals[self.cur_recv_id] = []
                             heapq.heappush(self.recv_intervals[self.cur_recv_id], [temp_data_upk[seq_h], temp_data_upk[seq_h]
                                                                               + temp_data_upk[len_h]])
@@ -418,12 +428,12 @@ class RDTSocket(UnreliableSocket):
                             # Combine text, store
                             tem_buffer = self.recv_buffer.copy()
                             for pkg in tem_buffer:
-                                if pkg[id_h] == self.cur_recv_id:
-                                    text += pkg[payload_h]
+                                if pkg.pkg[id_h] == self.cur_recv_id:
+                                    text += pkg.pkg[payload_h]
                                     self.recv_buffer.remove(pkg)
                                 else: break
+                            text += temp_data_upk[payload_h]
                             self.recv_list[self.cur_recv_id] = text
-                            frag_complete = True
                             break
                         else:
                             heapq.heappush(self.recv_intervals[pkg_id],
@@ -442,8 +452,8 @@ class RDTSocket(UnreliableSocket):
                                 # Combine text, return
                                 tem_buffer = self.recv_buffer.copy()
                                 for pkg in tem_buffer:
-                                    if pkg[id_h] == pkg_id:
-                                        text += pkg[payload_h]
+                                    if pkg.pkg[id_h] == pkg_id:
+                                        text += pkg.pkg[payload_h]
                                         self.recv_buffer.remove(pkg)
                                 self.recv_list[id_h] = text
                         else:
@@ -529,6 +539,33 @@ class RDTSocket(UnreliableSocket):
         #############################################################################
         return
 
+    def simple_send(self, bytes:bytes):
+        left = 0
+        length = 10
+        str_lst = []
+        while left+length < len(bytes) :
+            str_lst.append(bytes[left:left+length])
+            left += length
+        if left < len(bytes):
+            str_lst.append(bytes[left:])
+        pkg = utils.CreateRDTMessage(False,False,True,True,True,False,self.seq,self.seq_ack,self.id_cnt,str_lst[0])
+        self.sendto(pkg,self.dest_addr)
+        print("SS: send pkg0")
+        i = 1
+        while i<len(str_lst):
+            if i == len(str_lst)-1:
+                last = True
+            else:
+                last = False
+            pkg = utils.CreateRDTMessage(False, False, True, True, False, last, self.seq+i*length, self.seq_ack, self.id_cnt,
+                                         str_lst[i])
+            self.sendto(pkg,self.dest_addr)
+            print("SS: send pkg",i)
+            i += 1
+        i = 1
+        while i<len(str_lst):
+            data = self.recv(1024)
+
     def close(self):
         """
         Finish the connection and release resources. For simplicity, assume that
@@ -556,22 +593,23 @@ class RDTSocket(UnreliableSocket):
             else:
                 break
         # state: FIN_WAIT_1->FIN_WAIT_2
-        self.seq += self.seq_next
-        self.seq_ack = fin_ack_recv_upk[4] + 1
+        self.seq = self.seq_next
+        self.seq_ack = fin_ack_recv_upk[seq_h] + 1
         print("2.Close is agreed.")
 
         # state: FIN_WAIT_2->TIMED_WAIT
         fin_ack = utils.CreateRDTMessage(fin_ack_h[0], fin_ack_h[1], fin_ack_h[2], SEQ=self.seq,
                                          SEQ_ACK=self.seq_ack,
                                          Payload='')
-        self.send(fin_ack)
+        self.sendto(fin_ack, self.dest_addr)
 
         # wait while recv till no problem
-        while(1):
-            timeOut = self.check_time_out(fin_ack_recv)
+        while 1:
+            # timeOut = self.check_time_out()
+            timeOut = True
             if timeOut:
                 # shut down
-                USocket.sockets[id(super)].shutdown(socket.SHUT_RDWR)
+                # USocket.sockets[id(super)].shutdown(socket.SHUT_RDWR)
                 print("4.All close and close ack sent.")
                 super().close()
                 break
@@ -581,11 +619,11 @@ class RDTSocket(UnreliableSocket):
             #                             END OF YOUR CODE                              #
             #############################################################################
 
-    def check_time_out(self, dup_message):
+    def check_time_out(self):
         thread = recvThreading(self)
         start = time.time()
         thread.start()
-        thread.run_dup_tect(dup_message)
+        thread.run()
 
         valid = False
         if time.time() - start < 2 * self.timeout:

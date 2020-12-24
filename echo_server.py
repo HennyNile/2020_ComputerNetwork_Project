@@ -14,7 +14,8 @@ class socketThreading(threading.Thread):
 
     def run(self):
         socketCommunicate(conn,id)
-        conn.close()
+        # if want active close, again, change code
+        # conn.close()
 
 def socketCommunicate(conn,thread_id):
     while True:
