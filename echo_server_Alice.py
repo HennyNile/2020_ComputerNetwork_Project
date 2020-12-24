@@ -19,9 +19,14 @@ def socketCommunicate(conn,thread_id):
     while True:
         data = conn.recv(4096)
         print("Socket",thread_id,"Received a message")
-        print(UnpackRDTMessage(data)[8].decode()[0:100])
-        alice1.write(UnpackRDTMessage(data)[8].decode())
-        if not data: break
+        if not data:
+            print("Receive finished!")
+            break
+        #print(UnpackRDTMessage(data)[8].decode()[0:100])
+        #alice1.write(UnpackRDTMessage(data)[8].decode())
+        #print(data.decode())
+        alice1.write(data.decode())
+
 
 alice1 = open("alice1.txt","w+")
 
