@@ -22,7 +22,9 @@ def socketCommunicate(conn,thread_id):
         data = conn.recv(1024)
         # print("Socket",thread_id,"Received:", UnpackRDTMessage(data)[8].decode())
         print("Socket", thread_id, "Received:", data)
-        if not data: break
+        if not data:
+            conn.close()
+            break
         # if UnpackRDTMessage(data)[8].decode()=="close":
         #     conn.close()
     # conn.sendall(data)

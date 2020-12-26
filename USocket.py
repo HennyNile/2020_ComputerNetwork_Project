@@ -54,6 +54,7 @@ class UnreliableSocket:
         return sockets[id(self)].getsockname()
 
     def close(self):
+        sockets[id(self)].shutdown(2)
         sockets[id(self)].close()
 
 
