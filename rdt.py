@@ -22,7 +22,7 @@ syn_sent_h = (True, False, False)
 syn_recv_h = (True, False, True)
 est_conn_h = (False, False, True)
 fin_sent_h = (False, True, True) # ACK for latest received pkg
-fin_ack_h = (False, True, True)  # ACK for fin_sent
+fin_ack_h = (False, False, True)  # ACK for fin_sent
 fin_recv_ack_h = (False,False,True)
 
 
