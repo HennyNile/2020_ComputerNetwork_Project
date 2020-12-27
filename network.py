@@ -35,7 +35,6 @@ class Server(ThreadingUDPServer):
         
     def finish_request(self, request, client_address):
         data, socket = request
-        
         with lock:
             if self.rate: time.sleep(len(data)/self.rate)
             self.buffer -= len(data)
@@ -67,6 +66,6 @@ class Server(ThreadingUDPServer):
 server_address = ('127.0.0.1', 12345)
 
 if __name__ == '__main__':
-    with Server(server_address) as server:
+    with Server(server_address,rate=10240) as server:
         server.serve_forever()
         
