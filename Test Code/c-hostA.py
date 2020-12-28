@@ -2,16 +2,18 @@
 from socket import socket, AF_INET, SOCK_STREAM
 import time
 from difflib import Differ
+from CN_rdt.rdt import RDTSocket
 
 def run_client(server_addr):
-    # client = RDTSocket()
-    client = socket(AF_INET, SOCK_STREAM)  # check what python socket does
+    client = RDTSocket()
+    # client = socket(AF_INET, SOCK_STREAM)  # check what python socket does
+    client.bind(('127.0.0.1',13001))
     client.connect(server_addr)
 
     echo = b''
     count = 5
-    slice_size = 2048
-    blocking_send = True
+    slice_size = 4096
+    blocking_send = False
 
     with open('alice.txt', 'r') as f:
         data = f.read()

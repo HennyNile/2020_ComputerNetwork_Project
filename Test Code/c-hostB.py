@@ -2,10 +2,11 @@
 from socket import socket, AF_INET, SOCK_STREAM
 import time
 from difflib import Differ
+from CN_rdt.rdt import RDTSocket
 
 def run_client(server_addr):
-    # client = RDTSocket()
-    client = socket(AF_INET, SOCK_STREAM)  # check what python socket does
+    client = RDTSocket()
+    # client = socket(AF_INET, SOCK_STREAM)  # check what python socket does
     client.connect(server_addr)
 
     echo = b''
