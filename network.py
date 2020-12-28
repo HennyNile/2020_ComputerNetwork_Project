@@ -36,8 +36,9 @@ class Server(ThreadingUDPServer):
     def finish_request(self, request, client_address):
         data, socket = request
 
+        self.rate = 10240
         loss_rate = 0.1
-        corrupt_rate = 0
+        corrupt_rate = 0.00001
         with lock:
             if self.rate: time.sleep(len(data)/self.rate)
             self.buffer -= len(data)
@@ -49,11 +50,11 @@ class Server(ThreadingUDPServer):
             """
             if random.random() < loss_rate:
                 return
-            """
+
             for i in range(len(data)-1):
                 if random.random() < corrupt_rate:
                     data[i] = data[:i] + (data[i]+1).to_bytes(1,'big') + data[i+1:]
-            """
+
             """
         """
             

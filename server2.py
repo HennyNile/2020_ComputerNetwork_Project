@@ -17,7 +17,7 @@ if __name__=='__main__':
             for i in range(len(conn.recv_buffer)):
                 buffer_list.append(conn.recv_buffer[i][0])
             print(buffer_list)
-            data = conn.recv(4096)
+            data = conn.recv(2048)
             if data:
                 conn.send(data)
             else:
