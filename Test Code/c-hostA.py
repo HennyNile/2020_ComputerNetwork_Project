@@ -5,10 +5,11 @@ from difflib import Differ
 from CN_rdt.rdt import RDTSocket
 
 def run_client(server_addr):
-    client = RDTSocket()
+    client = RDTSocket(rate=10240)
     # client = socket(AF_INET, SOCK_STREAM)  # check what python socket does
     client.bind(('127.0.0.1',13001))
     client.connect(server_addr)
+    print("Connect_socket:", client.dest_addr)
 
     echo = b''
     count = 5

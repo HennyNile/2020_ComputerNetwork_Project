@@ -1,7 +1,8 @@
-from USocket import UnreliableSocket
-import utils as utils
+from CN_rdt.USocket import UnreliableSocket
+import CN_rdt.utils as utils
 import threading
 import time
+import random
 
 port_pool = [(12000+ _) for _ in range(1000)]
 port_pool_flag = [0 for _ in range(1000)]
@@ -147,10 +148,11 @@ class RDTSocket(UnreliableSocket):
         self.maxwinsize = 5
         self.maxmessagelen = 3000
         self.maxbuffersize = 4096
-        self.timeout = 1
+        self.timeout = 3
         self.this_fin = True
         self.this_fin_seq = None
         self.recv_bytes = b''
+        self.retran_cnt = 0
 
         #############################################################################
         #                             END OF YOUR CODE                              #
@@ -188,10 +190,11 @@ class RDTSocket(UnreliableSocket):
 
         # 2.Send syn_recv to client
         newport = 0
-        for i in range(1000):
-            if port_pool_flag[i] == 0:
-                newport = port_pool[i]
-                port_pool_flag[i] = 1
+        while True:
+            port = int(random.random() * 1000)
+            if port_pool_flag[port] == 0:
+                newport = port_pool[port]
+                port_pool_flag[port] = 1
                 break
         newsockaddr = "127.0.0.1,"+str(newport)
         syn_recv = utils.CreateRDTMessage(SYN=syn_recv_h[0], FIN=syn_recv_h[1], ACK=syn_recv_h[2], SEQ=self.seq,
@@ -473,7 +476,13 @@ class RDTSocket(UnreliableSocket):
             thread = recvThreading(self)
             thread.start()
 
+        congestion_flag = False
+
         while True:
+            if congestion_flag:
+                time.sleep(1)
+                starttime += 1
+                self.timeout += 1
             if win_left_position == package_num:
                 break
             elif SetnewThread:
@@ -491,6 +500,9 @@ class RDTSocket(UnreliableSocket):
             #     continue
 
             if time.time() - starttime < self.timeout:
+                self.retran_cnt = 0
+                self.timeout = 3
+                congestion_flag = False
                 if thread.buffer is not None:
                     print((time.time() * 1000) % 1000)
                     print("receive an ACK", utils.UnpackRDTMessage(thread.buffer)[0:8])
@@ -504,10 +516,13 @@ class RDTSocket(UnreliableSocket):
                             break
                     thread.buffer = None
             else:
+                # self.retran_cnt += 1
                 print((time.time() * 1000) % 1000)
                 print("Retransmission! win_left_seqack is",winseqack[0])
                 starttime = time.time()
                 package = winbuffer[0]
+                if self.retran_cnt > 3:
+                    congestion_flag = True
                 self.sendto(package, self.dest_addr)
                 continue
 
