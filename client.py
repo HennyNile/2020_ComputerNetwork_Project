@@ -25,6 +25,7 @@ blocking send works but takes more time
 
 while True:
     reply = client.recv(4096)
+    print("len of reply is",len(reply))
     echo += reply
     #print(reply)
     if len(echo)==len(encoded)*count:

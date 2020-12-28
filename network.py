@@ -35,6 +35,9 @@ class Server(ThreadingUDPServer):
         
     def finish_request(self, request, client_address):
         data, socket = request
+
+        loss_rate = 0.1
+        corrupt_rate = 0
         with lock:
             if self.rate: time.sleep(len(data)/self.rate)
             self.buffer -= len(data)
@@ -43,12 +46,16 @@ class Server(ThreadingUDPServer):
             you can add random loss/corrupt here
 
             for example:
+            """
             if random.random() < loss_rate:
-                return 
+                return
+            """
             for i in range(len(data)-1):
                 if random.random() < corrupt_rate:
-                    data[i] = data[:i] + (data[i]+1).to_bytes(1,'big) + data[i+1:]
+                    data[i] = data[:i] + (data[i]+1).to_bytes(1,'big') + data[i+1:]
             """
+            """
+        """
             
         """
         this part is not blocking and is executed by multiple threads in parallel
@@ -61,11 +68,10 @@ class Server(ThreadingUDPServer):
         to = bytes_to_addr(data[:8])
         print(client_address, to) # observe tht traffic
         socket.sendto(addr_to_bytes(client_address) + data[8:], to)
-
-
+    
 server_address = ('127.0.0.1', 12345)
 
 if __name__ == '__main__':
-    with Server(server_address,rate=10240) as server:
+    with Server(server_address) as server:
         server.serve_forever()
         
