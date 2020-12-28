@@ -36,10 +36,7 @@ def CreateRDTMessage(SYN=False, FIN=False, ACK=False, SEQ=0, SEQ_ACK=0, Payload=
     :param SYN:  Flag  1 bit
     :param FIN:  Flag  1 bit
     :param ACK:  Flag  1 bit
-    :param FG: Flag 1 bit, fragmented or not
-    :param FF: Flag 1 bit, if fragmented, whether the first fragment
-    :param LF: Flag 1 bit, if fragmented, whether the last fragment
-    :param ID: Payload Identification number 4 bytes
+    :param BLANK: Flag 1 bit
     :param SEQ:  Sequence number  4 bytes
     :param SEQ_ACK: Ack  4 bytes
     :param LEN:  Length of Payload  4 bytes
