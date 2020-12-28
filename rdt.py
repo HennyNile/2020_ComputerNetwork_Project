@@ -172,6 +172,8 @@ class RDTSocket(UnreliableSocket):
         print("------- listening for connection request -------")
         self._send_to = self.sendto
         self._recv_from = self.recvfrom
+        self.seq = 0
+        self.seq_ack = 0
 
         # 1.Listen for Connection request
         syn_sent = None
@@ -209,7 +211,7 @@ class RDTSocket(UnreliableSocket):
                 if thread.buffer is not None:
                     ack = thread.buffer
                     ack_upk = utils.UnpackRDTMessage(ack)
-                    #print("get a ack, self.seq =", self.seq, ", seq_ack = ", ack_upk[5])
+                    print("get a ack, self.seq =", self.seq, ", seq_ack = ", ack_upk[5])
                     if check_package(ack,0):
                         self.sendto(syn_recv, self.dest_addr)
                         thread = recvThreading(self)
@@ -352,27 +354,9 @@ class RDTSocket(UnreliableSocket):
             self.recv_bytes = b''
             return data
 
-        # while True:
-        #     if len(self.recv_buffer) > 0:
-        #         print((time.time() * 1000) % 1000)
-        #         print("self.seqack =", self.seq_ack, "self.recv_buffer[0][0] =", self.recv_buffer[0][0])
-        #         if self.recv_buffer[0][0] < self.seq_ack:
-        #             self.recv_buffer = self.recv_buffer[1:]
-        #         elif self.recv_buffer[0][0] == self.seq_ack:
-        #             #package = utils.UnpackRDTMessage(self.recv_buffer[0][1])
-        #             print("Read a message in buffer.")
-        #             self.seq_ack += self.recv_buffer[0][2]
-        #             data = self.recv_buffer[0][1]
-        #             self.recv_buffer = self.recv_buffer[1:]
-        #             return data
-        #         else:
-        #             break
-        #     else:
-        #         break
-
         if self.this_fin == False and self.this_fin_seq is not None:
             if self.seq_ack == self.this_fin_seq:
-                self.close()
+                #self.close()
                 return None
 
         temdata, addr = self.recvfrom(self.maxbuffersize)
@@ -423,7 +407,7 @@ class RDTSocket(UnreliableSocket):
             self.this_fin = False
             self.this_fin_seq = package[4]
             if self.seq_ack == self.this_fin_seq:
-                self.close()
+                #self.close()
                 return None
             data = self.recv(4096)
         else:
@@ -460,7 +444,6 @@ class RDTSocket(UnreliableSocket):
         winseqack = [0 for i in range(winsize)]
         win_left_position = 0
         win_right_position = 0
-        #SetTimerFlag = 0
         SetnewThread = False
         starttime = time.time()
         thread = None
@@ -468,12 +451,11 @@ class RDTSocket(UnreliableSocket):
         if threading.active_count()>1: # the threading left in connect()
             print(threading.enumerate())
             thread = threading.enumerate()[1]
-
         else:
             thread = recvThreading(self)
             thread.start()
-
         while True:
+
             if win_left_position == package_num:
                 break
             elif SetnewThread:
@@ -593,7 +575,7 @@ class RDTSocket(UnreliableSocket):
             recv_flag = False
             #self.sendto(est_conn, self.dest_addr)
             while True:
-                if time.time() - starttime > self.timeout * 3:
+                if time.time() - starttime > self.timeout * 2:
                     print("time out")
                     if recv_flag:
                         break
@@ -607,6 +589,8 @@ class RDTSocket(UnreliableSocket):
                             starttime = time.time()
                             self.sendto(ack, self.dest_addr)
                             recv_flag = True
+                        elif fin_sent_upk[0] == True and fin_sent_upk[1] == True and fin_sent_upk[2] == True:
+                            break
                         thread = recvThreading(self)
                         thread.start()
             print("3.An fin_sent package is received.")
@@ -618,7 +602,6 @@ class RDTSocket(UnreliableSocket):
             fin_sent = utils.CreateRDTMessage(fin_sent_h[0], fin_sent_h[1], fin_sent_h[2], SEQ=self.seq,
                                               SEQ_ACK=self.seq_ack)
             starttime = time.time()
-            #self.seq += len(newsockaddr)
             thread = recvThreading(self)
             thread.start()
             self.sendto(fin_sent, self.dest_addr)
@@ -639,6 +622,9 @@ class RDTSocket(UnreliableSocket):
                             starttime = time.time()
                         elif check_package(ack, 2) and ack_upk[5] == self.seq:
                             self.seq_ack += ack_upk[6]
+                            ack = utils.CreateRDTMessage(SYN=True, FIN=True, ACK=True, SEQ=self.seq,
+                                                         SEQ_ACK=ack_upk[4] + ack_upk[6])
+                            self.sendto(ack, self.dest_addr)
                             break
                         else:
                             thread = recvThreading(self)
@@ -651,10 +637,12 @@ class RDTSocket(UnreliableSocket):
             print("2.fin_ack is sent.")
             print("3.fin_sent is sent.")
             print("4.fin_ack is received.")
+            return
         #############################################################################
         #                             END OF YOUR CODE                              #
         #############################################################################
-        super().close()
+        #super().close()
+
 
     def set_send_to(self, send_to):
         self._send_to = send_to

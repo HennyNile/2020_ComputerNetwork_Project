@@ -27,15 +27,20 @@ class Server(ThreadingUDPServer):
         if this function returns False， the request will not be processed, i.e. is discarded.
         details: https://docs.python.org/3/library/socketserver.html
         """
-        return True
+        if self.buffer < 100000: # some finite buffer size (in bytes)
+            self.buffer += len(request[0])
+            return True
+        else:
+            return False
         
     def finish_request(self, request, client_address):
         data, socket = request
 
+        self.rate = 10240
         loss_rate = 0.1
         corrupt_rate = 0.00001
         with lock:
-            # if self.rate: time.sleep(len(data)/self.rate)
+            if self.rate: time.sleep(len(data)/self.rate)
             self.buffer -= len(data)
             """
             blockingly process each request
