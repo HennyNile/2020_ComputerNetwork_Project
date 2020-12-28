@@ -27,31 +27,36 @@ class Server(ThreadingUDPServer):
         if this function returns False， the request will not be processed, i.e. is discarded.
         details: https://docs.python.org/3/library/socketserver.html
         """
-        return True
+        if self.buffer < 100000: # some finite buffer size (in bytes)
+            self.buffer += len(request[0])
+            return True
+        else:
+            return False
         
     def finish_request(self, request, client_address):
         data, socket = request
 
-        loss_rate = 0.1
-        corrupt_rate = 0.00001
+        # self.rate = 10240
+        # loss_rate = 0.1
+        # corrupt_rate = 0.00001
         with lock:
-            # if self.rate: time.sleep(len(data)/self.rate)
+            if self.rate: time.sleep(len(data)/self.rate)
             self.buffer -= len(data)
-            """
-            blockingly process each request
-            you can add random loss/corrupt here
-
-            for example:
-            """
-            if random.random() < loss_rate:
-                return
-
-            for i in range(len(data)-1):
-                if random.random() < corrupt_rate:
-                    data[i] = data[:i] + (data[i]+1).to_bytes(1,'big') + data[i+1:]
-
-            """
-        """
+        #     """
+        #     blockingly process each request
+        #     you can add random loss/corrupt here
+        #
+        #     for example:
+        #     """
+        #     if random.random() < loss_rate:
+        #         return
+        #
+        #     for i in range(len(data)-1):
+        #         if random.random() < corrupt_rate:
+        #             data[i] = data[:i] + (data[i]+1).to_bytes(1,'big') + data[i+1:]
+        #
+        #     """
+        # """
             
         """
         this part is not blocking and is executed by multiple threads in parallel
