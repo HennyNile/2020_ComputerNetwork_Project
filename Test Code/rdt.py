@@ -363,7 +363,7 @@ class RDTSocket(UnreliableSocket):
             temdata, addr = self.recvfrom(self.maxbuffersize)
 
         if check_package(temdata,3) and len(temdata)>18:
-            print(time.time()*1000)
+            print(time.time())
             print("receive an message in recv, packet header is", utils.UnpackRDTMessage(temdata)[0:8])
             package = utils.UnpackRDTMessage(temdata)
             ack_package = utils.CreateRDTMessage(SYN=False, FIN=False, ACK=True, SEQ=self.seq,
