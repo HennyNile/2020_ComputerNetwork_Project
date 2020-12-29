@@ -61,9 +61,11 @@ class recvThreading(threading.Thread):
             print("An ack is sent in thread, packet header is", utils.UnpackRDTMessage(ack_package)[0:8])
             self.thread_running = False
             self.run()
-        else:
+        elif (check_package(buffer, 3) and package[6]==0) or check_package(buffer,1):
             print("receive an ack or SYN_RECV in thread, packet header is",package[0:8])
             self.buffer = buffer
+        else:
+            self.run()
         self.thread_running = False
 
     def get_thread_running(self):
@@ -470,8 +472,6 @@ class RDTSocket(UnreliableSocket):
                 self.timeout = 3
                 congestion_flag = False
                 if thread.buffer is not None:
-
-
                     local_message = thread.buffer
                     fields = utils.UnpackRDTMessage(local_message)
                     for i in range(win_left_position, win_right_position):
