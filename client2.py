@@ -1,4 +1,4 @@
-from rdt import RDTSocket
+from CN_rdt.rdt import RDTSocket
 from socket import socket, AF_INET, SOCK_STREAM
 import time
 from difflib import Differ
@@ -55,3 +55,5 @@ if __name__=='__main__':
     for line in diff:
         if not line.startswith('  '): # check if data is correctly echoed
             print("diff:", line)
+    with open('output1.txt','wb') as output:
+        output.write(echo)

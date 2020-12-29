@@ -39,10 +39,10 @@ class Server(ThreadingUDPServer):
         with lock:
             if self.rate: time.sleep(len(data)/self.rate)
             self.buffer -= len(data)
-            # loss_rate = 0.1
-            # corrupt_rate = 0.00001
             loss_rate = 0.1
             corrupt_rate = 0.00001
+            # loss_rate = 0
+            # corrupt_rate = 0
             if random.random() < loss_rate:
                 return
             for i in range(len(data)):

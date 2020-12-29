@@ -1,4 +1,4 @@
-from rdt import RDTSocket
+from CN_rdt.rdt import RDTSocket
 from socket import socket, AF_INET, SOCK_DGRAM, SOCK_STREAM
 import time
 

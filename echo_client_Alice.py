@@ -1,6 +1,6 @@
 # Echo server program
-from rdt import RDTSocket
-from utils import CreateRDTMessage,UnpackRDTMessage
+from CN_rdt.rdt import RDTSocket
+from CN_rdt.utils import CreateRDTMessage,UnpackRDTMessage
 import os
 
 buf = bytearray(os.path.getsize("alice.txt"))
