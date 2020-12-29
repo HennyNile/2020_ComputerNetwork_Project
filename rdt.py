@@ -444,6 +444,7 @@ class RDTSocket(UnreliableSocket):
         SetnewThread = False
         starttime = time.time()
         thread = None
+        timeout = self.timeout
         #print("Now there is", threading.active_count(), "threadings")
         if threading.active_count()>1: # the threading left in connect()
             #print(threading.enumerate())
@@ -458,7 +459,7 @@ class RDTSocket(UnreliableSocket):
             if congestion_flag:
                 time.sleep(1)
                 starttime += 1
-                self.timeout += 1
+                timeout += 1
 
             if win_left_position == package_num:
                 break
@@ -467,11 +468,11 @@ class RDTSocket(UnreliableSocket):
                 thread.start()
                 SetnewThread = False
 
-            if time.time() - starttime < self.timeout:
-                self.retran_cnt = 0
-                self.timeout = 3
-                congestion_flag = False
+            if time.time() - starttime < timeout:
                 if thread.buffer is not None:
+                    congestion_flag = False
+                    self.retran_cnt = 0
+                    timeout = self.timeout
                     local_message = thread.buffer
                     fields = utils.UnpackRDTMessage(local_message)
                     for i in range(win_left_position, win_right_position):
