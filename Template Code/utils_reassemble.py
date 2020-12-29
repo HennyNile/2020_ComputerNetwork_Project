@@ -30,13 +30,16 @@ def getCheckSum(package):
     return sum
 
 
-def CreateRDTMessage(SYN=False, FIN=False, ACK=False, SEQ=0, SEQ_ACK=0, Payload=''):
+def CreateRDTMessage(SYN=False, FIN=False, ACK=False, FG=False, FF=False, LF=False, SEQ=0, SEQ_ACK=0, ID=0, Payload=''):
     '''(bool,bool,bool,integer,integer,integer,short,str)->Message
     Create a message and return it
     :param SYN:  Flag  1 bit
     :param FIN:  Flag  1 bit
     :param ACK:  Flag  1 bit
-    :param BLANK: Flag 1 bit
+    :param FG: Flag 1 bit, fragmented or not
+    :param FF: Flag 1 bit, if fragmented, whether the first fragment
+    :param LF: Flag 1 bit, if fragmented, whether the last fragment
+    :param ID: Payload Identification number 4 bytes
     :param SEQ:  Sequence number  4 bytes
     :param SEQ_ACK: Ack  4 bytes
     :param LEN:  Length of Payload  4 bytes
@@ -48,24 +51,23 @@ def CreateRDTMessage(SYN=False, FIN=False, ACK=False, SEQ=0, SEQ_ACK=0, Payload=
     then ,checksum is calculated and changed
     '''
     LEN = len(Payload)
-    fmt = "<4?3iH%ds" % LEN
-    BLANK = False
+    fmt = "<6?4iH%ds" % LEN
     Payload = bytes(Payload.encode())
-    package = struct.pack(fmt, SYN, FIN, ACK, BLANK, SEQ, SEQ_ACK, LEN, 0, Payload)
+    package = struct.pack(fmt, SYN, FIN, ACK, FG, FF, LF, SEQ, SEQ_ACK, ID, LEN, 0, Payload)
     CheckSum = getCheckSum(package)
-    return struct.pack(fmt, SYN, FIN, ACK, BLANK, SEQ, SEQ_ACK, LEN, CheckSum, Payload)
+    return struct.pack(fmt, SYN, FIN, ACK, FG, FF, LF, SEQ, SEQ_ACK, ID, LEN, CheckSum, Payload)
 
 def UnpackRDTMessage(message):
     message_len = len(message)
-    payload_len = message_len - 18
-    fmt = "<4?3iH%ds" % payload_len
+    payload_len = message_len - 24
+    fmt = "<6?4iH%ds" % payload_len
     return struct.unpack(fmt, message)
 
 if __name__ == "__main__":
     # test of CreateRdtMessage
     payload = "?????"
-    message = CreateRDTMessage(True,False,False,2,20,Payload=payload)
-    message1 = CreateRDTMessage(True,False,False,2,20,Payload="")
+    message = CreateRDTMessage(True,False,False,True,True,False,2,20,12,Payload=payload)
+    message1 = CreateRDTMessage(True,False,False,True,True,False,2,20,12,Payload="")
     print("Pack:", message)
     a = getCheckSum(message)
     print(a)

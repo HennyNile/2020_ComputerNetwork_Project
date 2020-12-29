@@ -1,4 +1,5 @@
 from rdt import RDTSocket
+from socket import socket, AF_INET, SOCK_DGRAM, SOCK_STREAM
 import time
 
 if __name__=='__main__':
@@ -11,11 +12,6 @@ if __name__=='__main__':
         conn, client_addr = server.accept()
         start = time.perf_counter()
         while True:
-            print("There are", len(conn.recv_buffer), "messages in recv_buffer")
-            buffer_list = []
-            for i in range(len(conn.recv_buffer)):
-                buffer_list.append(conn.recv_buffer[i][0])
-            print(buffer_list)
             data = conn.recv(2048)
             if data:
                 conn.send(data)

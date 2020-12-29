@@ -1,17 +1,17 @@
 from rdt import RDTSocket
+from socket import socket, AF_INET, SOCK_STREAM
 import time
 from difflib import Differ
 
 if __name__=='__main__':
-    client = RDTSocket()
-    client.bind(('127.0.0.1', 40000))
-    #client = socket(AF_INET, SOCK_STREAM) # check what python socket does
+    # client = RDTSocket()
+    client = socket(AF_INET, SOCK_STREAM) # check what python socket does
     client.connect(('127.0.0.1', 9999))
 
     echo = b''
     count = 5
     slice_size = 2048
-    blocking_send = False
+    blocking_send = True
 
     with open('alice.txt', 'r') as f:
         data = f.read()
@@ -39,7 +39,6 @@ if __name__=='__main__':
         for i in range(count):
             client.send(encoded)
             while len(echo) < len(encoded)*(i+1):
-                print("There are", len(client.recv_buffer), "messages in recv_buffer")
                 reply = client.recv(slice_size)
                 echo += reply
 
@@ -53,6 +52,4 @@ if __name__=='__main__':
     diff = Differ().compare((data*count).splitlines(keepends=True), echo.decode().splitlines(keepends=True))
     for line in diff:
         if not line.startswith('  '): # check if data is correctly echoed
-            print("diff:", line)
-    with open('output1.txt','wb') as output:
-        output.write(echo)
+            print(line)
