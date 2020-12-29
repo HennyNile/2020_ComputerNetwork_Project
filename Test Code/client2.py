@@ -1,15 +1,13 @@
-# from rdt import RDTSocket
+from rdt import RDTSocket
 from socket import socket, AF_INET, SOCK_STREAM
 import time
 from difflib import Differ
-from rdt import RDTSocket
 
-def run_client(server_addr):
+if __name__=='__main__':
     client = RDTSocket()
-    # client = socket(AF_INET, SOCK_STREAM)  # check what python socket does
-    client.bind(('127.0.0.1',13002))
-    client.connect(server_addr)
-    print("Connect_socket:", client.dest_addr)
+    client.bind(('127.0.0.1', 40000))
+    #client = socket(AF_INET, SOCK_STREAM) # check what python socket does
+    client.connect(('127.0.0.1', 9999))
 
     echo = b''
     count = 5
@@ -19,7 +17,7 @@ def run_client(server_addr):
     with open('alice.txt', 'r') as f:
         data = f.read()
         encoded = data.encode()
-        assert len(data) == len(encoded)
+        assert len(data)==len(encoded)
 
     '''
     check if your rdt pass either of the two
@@ -27,11 +25,11 @@ def run_client(server_addr):
     '''
     if blocking_send:
         print('transmit in mode A, send & recv in slices')
-        slices = [encoded[i * slice_size:i * slice_size + slice_size] for i in range(len(encoded) // slice_size + 1)]
-        assert sum([len(slice) for slice in slices]) == len(encoded)
+        slices = [encoded[i*slice_size:i*slice_size+slice_size] for i in range(len(encoded)//slice_size+1)]
+        assert sum([len(slice) for slice in slices])==len(encoded)
 
         start = time.perf_counter()
-        for i in range(count):  # send 'alice.txt' for count times
+        for i in range(count): # send 'alice.txt' for count times
             for slice in slices:
                 client.send(slice)
                 reply = client.recv(slice_size)
@@ -41,7 +39,8 @@ def run_client(server_addr):
         start = time.perf_counter()
         for i in range(count):
             client.send(encoded)
-            while len(echo) < len(encoded) * (i + 1):
+            while len(echo) < len(encoded)*(i+1):
+                print("There are", len(client.recv_buffer), "messages in recv_buffer")
                 reply = client.recv(slice_size)
                 echo += reply
 
@@ -51,11 +50,10 @@ def run_client(server_addr):
     make sure the following is reachable
     '''
 
-    print(f'transmitted {len(encoded) * count}bytes in {time.perf_counter() - start}s')
-    diff = Differ().compare((data * count).splitlines(keepends=True), echo.decode().splitlines(keepends=True))
+    print(f'transmitted {len(encoded)*count}bytes in {time.perf_counter()-start}s')
+    diff = Differ().compare((data*count).splitlines(keepends=True), echo.decode().splitlines(keepends=True))
     for line in diff:
-        if not line.startswith('  '):  # check if data is correctly echoed
-            print(line)
-
-if __name__=='__main__':
-    run_client(('127.0.0.1',9998))
+        if not line.startswith('  '): # check if data is correctly echoed
+            print("diff:", line)
+    with open('output1.txt','wb') as output:
+        output.write(echo)

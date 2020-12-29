@@ -2,7 +2,7 @@
 from socket import socket, AF_INET, SOCK_STREAM
 import time
 from difflib import Differ
-from CN_rdt.rdt import RDTSocket
+from rdt import RDTSocket
 
 def run_client(server_addr):
     client = RDTSocket(rate=10240)
