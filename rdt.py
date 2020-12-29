@@ -22,8 +22,8 @@ syn_sent_h = (True, False, False)
 syn_recv_h = (True, False, True)
 est_conn_h = (False, False, True)
 fin_sent_h = (False, True, True) # ACK for latest received pkg
-# fin_ack_h = (False, False, True)  # ACK for fin_sent
-# fin_recv_ack_h = (False,False,True)
+fin_ack_h = (False, False, True)  # ACK for fin_sent
+fin_recv_ack_h = (False,False,True)
 
 
 # to use thread, notice things: 1.modify seq, 2.set starttime 3.start a thread 4.sendto message
@@ -38,11 +38,11 @@ class recvThreading(threading.Thread):
         buffer,addr = self.rdt.recvfrom(self.rdt.maxbuffersize)
         while not addr == self.rdt.dest_addr:
             buffer, addr = self.rdt.recvfrom(self.rdt.maxbuffersize)
-        #print(time.time())
+        print((time.time() * 1000) % 1000)
         self.thread_running = True
         package = utils.UnpackRDTMessage(buffer)
         if check_package(buffer, 3) and package[6]>0:
-            #print("receive an message in thread,", package[0:8])
+            print("receive an message in thread,", package[0:8])
             if len(self.rdt.recv_buffer) == 0:
                 self.rdt.recv_buffer = [(package[4],package[8],package[6])]
             else:
@@ -57,11 +57,12 @@ class recvThreading(threading.Thread):
             ack_package = utils.CreateRDTMessage(SYN=False, FIN=False, ACK=True, SEQ=self.rdt.seq,
                                                  SEQ_ACK=package[4]+package[6])
             self.rdt.sendto(ack_package, self.rdt.dest_addr)
-            #print("An ack is sent in thread!",utils.UnpackRDTMessage(ack_package)[0:8])
+            print((time.time() * 1000) % 1000)
+            print("An ack in thread is sent!",utils.UnpackRDTMessage(ack_package)[0:8])
             self.thread_running = False
             self.run()
         else:
-            #print("receive an ACK or SYN_RECV in thread",package[0:8])
+            print("receive an ACK or SYN_RECV in thread",package[0:8])
             self.buffer = buffer
         self.thread_running = False
 
@@ -83,27 +84,35 @@ def check_package(package, package_type):
     # 2: est_conn
     # 3: communication
     # 4: fin_sent
+    # 5: fin_recv
+    # 6: fin_recv_ack
     if not utils.getCheckSum(package) == 0:
-        #print("+++Invalid paclket: Wrong checksum!")
+        print("+++Invalid package: Wrong checksum!")
         return False
     package_msg = utils.UnpackRDTMessage(package)
     if package_type == 0 and not package_msg[0:3] == syn_sent_h:
-        #print("+++SYN_SENT Failed\n+++Invalid packet: Wrong header!")
+        print("+++SYN_SENT Failed\n+++Invalid package: Wrong header!")
         return False
     if package_type == 1 and not package_msg[0:3] == syn_recv_h:
-        #print("+++SYN_RECV Failed\n+++Invalid packet: Wrong header!")
+        print("+++SYN_RECV Failed\n+++Invalid package: Wrong header!")
         return False
     if package_type == 2 and not package_msg[0:3] == est_conn_h :
-        #print("+++EST_CONN Failed\n+++Invalid packet: Wrong header!")
+        print("+++EST_CONN Failed\n+++Invalid package: Wrong header!")
         return False
     if package_type == 3 and not package_msg[0:3] == est_conn_h:
-        #print("+++Communicate mistakes\n+++Invalid packet: Wrong header!")
+        print("+++Communicate mistakes\n+++Invalid package: Wrong header!")
         return False
     if package_type == 4 and not package_msg[0:3] == fin_sent_h:
-        #print("+++FIN_SENT Failed\n+++Invalid packet: Wrong header!")
+        print("+++FIN_SENT Failed\n+++Invalid package: Wrong header!")
         return False
-    if package_type <0 or package_type > 4 :
-        #print("+++Invalid packet type:",package_type)
+    if package_type == 5 and not package_msg[0:3] == fin_ack_h:
+        print("+++FIN_RECV Failed\n+++Invalid package: Wrong header!")
+        return False
+    if package_type == 6 and not package_msg[0:3] == fin_recv_ack_h:
+        print("+++FIN_RECV_ACK Failed\n+++Invalid package: Wrong header!")
+        return False
+    if package_type <0 or package_type > 5 :
+        print("+++Invalid package type:",package_type)
         return False
     return True
 
@@ -130,26 +139,18 @@ class RDTSocket(UnreliableSocket):
         #############################################################################
         # TODO: ADD YOUR NECESSARY ATTRIBUTES HERE
         #############################################################################
-        # developer defined attributes
-        self.seq = 0
+        # package unpacking format
         self.seq_ack = 0
+        self.seq = 0
         self.dest_addr = None
+        self.recv_buffer = []
         self.maxwinsize = 5
         self.maxmessagelen = 3000
         self.maxbuffersize = 4096
-<<<<<<< Updated upstream
         self.timeout = 1
         self.this_fin = True
         self.this_fin_seq = None
         self.recv_bytes = b''
-=======
-        self.recv_buffer = []
-        self.recv_bytes = b''
-        self.timeout = 3
-        self.this_fin = True
-        self.this_fin_seq = None
-        self.retran_cnt = 0
->>>>>>> Stashed changes
 
         #############################################################################
         #                             END OF YOUR CODE                              #
@@ -168,21 +169,24 @@ class RDTSocket(UnreliableSocket):
         #############################################################################
         # TODO: YOUR CODE HERE                                                      #
         #############################################################################
-        #print("------- listening for connection request -------")
+        print("------- listening for connection request -------")
         self._send_to = self.sendto
         self._recv_from = self.recvfrom
         self.seq = 0
         self.seq_ack = 0
 
         # 1.Listen for Connection request
-        syn_sent, client_addr = None,None
+        syn_sent = None
+        client_addr = None
         while not syn_sent:
             syn_sent, client_addr = self.recvfrom(self.maxbuffersize)
             if not check_package(syn_sent, 0):
                 syn_sent = None
                 client_addr = None
         self.dest_addr = client_addr
-        #print("1.Received a connection request...")
+        # syn_sent_upk = utils.UnpackRDTMessage(syn_sent)
+        # self.seq_ack += syn_sent_upk[6]
+        print("1.Received a connection request...")
 
         # 2.Send syn_recv to client
         newport = 0
@@ -195,19 +199,19 @@ class RDTSocket(UnreliableSocket):
         syn_recv = utils.CreateRDTMessage(SYN=syn_recv_h[0], FIN=syn_recv_h[1], ACK=syn_recv_h[2], SEQ=self.seq,
                                           SEQ_ACK=self.seq_ack, Payload=newsockaddr)
 
+        #send_flag = False
         starttime = time.time()
         self.seq += len(newsockaddr)
         thread = recvThreading(self)
         thread.start()
         self.sendto(syn_recv, self.dest_addr)
-        #print(time.time())
-        #print("send an syn_recv in accept, package header is", utils.UnpackRDTMessage(syn_recv), self.dest_addr)
+        print("send an syn_recv", utils.UnpackRDTMessage(syn_recv), self.dest_addr)
         while True:
             if time.time() - starttime < self.timeout:
                 if thread.buffer is not None:
                     ack = thread.buffer
                     ack_upk = utils.UnpackRDTMessage(ack)
-                    # #print("get a ack, self.seq =", self.seq, ", seq_ack = ", ack_upk[5])
+                    print("get a ack, self.seq =", self.seq, ", seq_ack = ", ack_upk[5])
                     if check_package(ack,0):
                         self.sendto(syn_recv, self.dest_addr)
                         thread = recvThreading(self)
@@ -223,9 +227,9 @@ class RDTSocket(UnreliableSocket):
             else:
                 starttime =time.time()
                 self.sendto(syn_recv,self.dest_addr)
-        #print("2.SYN_RECV is sent.")
-        #print("3.Connection established.")
-        ##print("Now there is", threading.active_count(), "threadings")
+        print("2.SYN_RECV is sent.")
+        print("3.Connection established.")
+        print("Now there is", threading.active_count(), "threadings")
 
         conn.bind(("127.0.0.1",newport))
         addr = self.dest_addr
@@ -256,6 +260,7 @@ class RDTSocket(UnreliableSocket):
         syn_sent = utils.CreateRDTMessage(syn_sent_h[0], syn_sent_h[1], syn_sent_h[2], SEQ=self.seq, SEQ_ACK=self.seq_ack)
         newsockaddr = None
         starttime = time.time()
+        # modify seq is omitted
         thread = recvThreading(self)
         thread.start()
         self.sendto(syn_sent,self.dest_addr)
@@ -264,6 +269,7 @@ class RDTSocket(UnreliableSocket):
                 if thread.buffer is not None:
                     syn_recv = thread.buffer
                     syn_recv_upk = utils.UnpackRDTMessage(syn_recv)
+                    print("get a syn_recv, self.seq =",self.seq,", seq_ack = ",syn_recv_upk[5])
                     if check_package(syn_recv, 1) and syn_recv_upk[5] == self.seq:
                         self.seq_ack += syn_recv_upk[6]
                         newsockaddr = syn_recv_upk[8].decode().split(',')
@@ -277,13 +283,17 @@ class RDTSocket(UnreliableSocket):
                 starttime = time.time()
                 self.sendto(syn_sent,self.dest_addr)
                 continue
-        #print("1.SYN_SENT is sent.")
-        #print("2.SYN_RECV is received.")
+        print("1.SYN_SENT is sent.")
+        print("2.SYN_RECV is received.")
 
-        # 2.ESTABLISH CONNECTION
+        # 3.ESTABLISH CONNECTION
         est_conn = utils.CreateRDTMessage(est_conn_h[0], est_conn_h[1], est_conn_h[2], SEQ=self.seq,SEQ_ACK=self.seq_ack)
         starttime =time.time()
+        # undate seq is omitted
+        # thread = recvThreading(self)
+        # thread.start()
         self.sendto(est_conn,self.dest_addr)
+        #send_flag = False
         while True:
             if time.time() - starttime > self.timeout*3:
                 self.dest_addr = newsockaddr
@@ -295,13 +305,14 @@ class RDTSocket(UnreliableSocket):
                     syn_recv = thread.buffer
                     syn_recv_upk = utils.UnpackRDTMessage(syn_recv)
                     if check_package(syn_recv, 1) and syn_recv_upk[5] == self.seq:
+                        send_flag = False
                         starttime = time.time()
                         self.sendto(est_conn,self.dest_addr)
                     thread = recvThreading(self)
                     thread.start()
 
-        #print("3.Connected!")
-        ##print("Now there is",threading.active_count(),"threadings, they are",threading.enumerate())
+        print("3.Connected!")
+        print("Now there is",threading.active_count(),"threadings, they are",threading.enumerate())
         #############################################################################
         #                             END OF YOUR CODE                              #
         #############################################################################
@@ -345,6 +356,7 @@ class RDTSocket(UnreliableSocket):
 
         if self.this_fin == False and self.this_fin_seq is not None:
             if self.seq_ack == self.this_fin_seq:
+                #self.close()
                 return None
 
         temdata, addr = self.recvfrom(self.maxbuffersize)
@@ -352,12 +364,14 @@ class RDTSocket(UnreliableSocket):
             temdata, addr = self.recvfrom(self.maxbuffersize)
 
         if check_package(temdata,3) and len(temdata)>18:
-            #print(time.time())
-            #print("receive an message in recv, packet header", utils.UnpackRDTMessage(temdata)[0:8])
+            print((time.time()*1000)%1000)
+            print("receive an message", utils.UnpackRDTMessage(temdata)[0:8])
             package = utils.UnpackRDTMessage(temdata)
+            #print("package_seq is",package[4],"self.seq_ack is",self.seq_ack)
             ack_package = utils.CreateRDTMessage(SYN=False, FIN=False, ACK=True, SEQ=self.seq,
                                                  SEQ_ACK=package[4] + package[6])
-            #print("an ack in recv is sent, packet header is", utils.UnpackRDTMessage(ack_package)[0:8])
+            print((time.time() * 1000) % 1000)
+            print("An ack in recv is sent", utils.UnpackRDTMessage(ack_package)[0:8])
             self.sendto(ack_package, self.dest_addr)
             if package[4] > self.seq_ack:
                 if len(self.recv_buffer) == 0:
@@ -386,19 +400,19 @@ class RDTSocket(UnreliableSocket):
                 data = self.recv_bytes + b''
                 self.recv_bytes = b''
         elif check_package(temdata, 4):
-            #print(time.time())
-            #print("receive a fin packet in recv, packet header is", utils.UnpackRDTMessage(temdata)[0:8])
+            print("receive a fin packet!",utils.UnpackRDTMessage(temdata)[0:8])
             package = utils.UnpackRDTMessage(temdata)
             ack = utils.CreateRDTMessage(SYN=False, FIN=False, ACK=True, SEQ=self.seq, SEQ_ACK=package[4]+package[6])
-            #print("an ack for fin is sent in recv, packet header is",utils.UnpackRDTMessage(ack)[0:8])
             self.sendto(ack, self.dest_addr)
             self.this_fin = False
             self.this_fin_seq = package[4]
             if self.seq_ack == self.this_fin_seq:
+                #self.close()
                 return None
             data = self.recv(4096)
         else:
             data = self.recv(4096)
+
         #############################################################################
         #                             END OF YOUR CODE                              #
         #############################################################################
@@ -419,8 +433,7 @@ class RDTSocket(UnreliableSocket):
             package_num = int(message_len/self.maxmessagelen)
         else:
             package_num = int(message_len/self.maxmessagelen) + 1
-        #print(time.time())
-        #print("to send the message, need to send",package_num,"packets.")
+        print("Need to send",package_num,"packages.")
         winsize = 0
         if package_num<self.maxwinsize:
             winsize = package_num
@@ -434,18 +447,13 @@ class RDTSocket(UnreliableSocket):
         SetnewThread = False
         starttime = time.time()
         thread = None
-        ##print("Now there is", threading.active_count(), "threadings")
+        print("Now there is", threading.active_count(), "threadings")
         if threading.active_count()>1: # the threading left in connect()
-            #print(threading.enumerate())
+            print(threading.enumerate())
             thread = threading.enumerate()[1]
         else:
             thread = recvThreading(self)
             thread.start()
-<<<<<<< Updated upstream
-=======
-        congestion_flag = False
-
->>>>>>> Stashed changes
         while True:
 
             if win_left_position == package_num:
@@ -455,30 +463,36 @@ class RDTSocket(UnreliableSocket):
                 thread.start()
                 SetnewThread = False
 
+            # if not SetTimerFlag:
+            #     #print("Timer is reset.")
+            #     SetTimerFlag = 1
+            #     starttime = time.time()
+            #     thread = recvThreading(self)
+            #     thread.start()
+            # if thread.get_thread_running():
+            #     continue
+
             if time.time() - starttime < self.timeout:
                 if thread.buffer is not None:
+                    print((time.time() * 1000) % 1000)
+                    print("receive an ACK", utils.UnpackRDTMessage(thread.buffer)[0:8])
                     local_message = thread.buffer
                     fields = utils.UnpackRDTMessage(local_message)
                     for i in range(win_left_position, win_right_position):
                         if fields[5] == winseqack[i - win_left_position]:
-                            #print(time.time())
-                            #print("receive an ACK in position", i - win_left_position, "of sliding window")
+                            print("receive an ACK in",i - win_left_position)
                             winflag[i - win_left_position] = 1
                             SetnewThread = True
                             break
                     thread.buffer = None
             else:
-<<<<<<< Updated upstream
                 print((time.time() * 1000) % 1000)
                 print("Retransmission! win_left_seqack is",winseqack[0])
-=======
-                #print(time.time())
-                #print("Retransmission! need seq_ack of retransmitted packet is",winseqack[0])
->>>>>>> Stashed changes
                 starttime = time.time()
                 package = winbuffer[0]
                 self.sendto(package, self.dest_addr)
                 continue
+
 
             while winflag[0] == 1:
                 win_left_position += 1
@@ -499,15 +513,17 @@ class RDTSocket(UnreliableSocket):
                 else:
                     pac_msg_len = self.maxmessagelen
                 package_message = all_message[win_right_position*self.maxmessagelen:win_right_position*self.maxmessagelen+pac_msg_len].decode()
+                #print("length of payload is",len(package_message),"pac_msg_len is",pac_msg_len,"message_len is",message_len)
                 package = utils.CreateRDTMessage(SYN = est_conn_h[0],FIN=est_conn_h[1],ACK = est_conn_h[2],SEQ=self.seq,SEQ_ACK=self.seq_ack, Payload=package_message)
                 self.seq += pac_msg_len
                 winbuffer[win_right_position - win_left_position] = package
                 winseqack[win_right_position - win_left_position] = self.seq
-                #print(time.time())
-                #print("sending a packet",win_right_position,", packet header is", utils.UnpackRDTMessage(package)[0:8])
+                print((time.time() * 1000) % 1000)
+                print("sending package",win_right_position,utils.UnpackRDTMessage(package)[0:8])
                 self.sendto(package,self.dest_addr)
                 win_right_position += 1
-        #print("send finished!")
+
+        print("send finished!")
         #############################################################################
         #                             END OF YOUR CODE                              #
         #############################################################################
@@ -523,21 +539,19 @@ class RDTSocket(UnreliableSocket):
         #############################################################################
         if self.this_fin:  # raise a close request
             # 1.sent fin_sent and receive fin_ack
-            #print("0.Close starts.")
+            print("0.Close starts.")
             fin_sent = utils.CreateRDTMessage(fin_sent_h[0], fin_sent_h[1], fin_sent_h[2], SEQ=self.seq,
                                               SEQ_ACK=self.seq_ack)
             starttime = time.time()
             thread = recvThreading(self)
             thread.start()
             self.sendto(fin_sent, self.dest_addr)
-            #print(time.time())
-            #print("sending an fin_sent in close positively, packet header is", utils.UnpackRDTMessage(fin_sent), self.dest_addr)
             while True:
                 if time.time() - starttime < self.timeout:
                     if thread.buffer is not None:
                         ack = thread.buffer
                         ack_upk = utils.UnpackRDTMessage(ack)
-                        ##print("get a fin_ack, self.seq =", self.seq, ", seq_ack = ", ack_upk[5],", package[4] ans [5] is",ack_upk[4],ack_upk[5])
+                        print("get a fin_ack, self.seq =", self.seq, ", seq_ack = ", ack_upk[5],", package[4] ans [5] is",ack_upk[4],ack_upk[5])
                         if check_package(ack, 3) and ack_upk[5] == self.seq:
                             break
                         else:
@@ -548,21 +562,22 @@ class RDTSocket(UnreliableSocket):
                     starttime = time.time()
                     self.sendto(fin_sent, self.dest_addr)
                     continue
-            #print("1.FIN_SENT is sent.")
-            #print("2.FIN_ACK is received.")
+            print("1.FIN_SENT is sent.")
+            print("2.FIN_ACK is received.")
 
             # 2. listen for fin_sent and sent ack
             ack = utils.CreateRDTMessage(est_conn_h[0], est_conn_h[1], est_conn_h[2], SEQ=self.seq,
                                               SEQ_ACK=self.seq_ack)
             starttime = time.time()
+            # undate seq is omitted
             thread = recvThreading(self)
             thread.start()
             recv_flag = False
+            #self.sendto(est_conn, self.dest_addr)
             while True:
                 if time.time() - starttime > self.timeout * 2:
-                    #print(time.time())
+                    print("time out")
                     if recv_flag:
-                        #print("Waiting time is enough long.")
                         break
                     else:
                         starttime = time.time()
@@ -578,10 +593,8 @@ class RDTSocket(UnreliableSocket):
                             break
                         thread = recvThreading(self)
                         thread.start()
-            #print("3.An fin_sent packet is received.")
-            #print("4.An ack packet is sent.")
-            #print("connection closed.")
-
+            print("3.An fin_sent package is received.")
+            print("4.An ack package is sent.")
             self.dest_addr = None
             return
 
@@ -592,14 +605,13 @@ class RDTSocket(UnreliableSocket):
             thread = recvThreading(self)
             thread.start()
             self.sendto(fin_sent, self.dest_addr)
-            #print(time.time())
-            #print("sending an fin_sent in close passively, packet header is", utils.UnpackRDTMessage(fin_sent),self.dest_addr)
+            print("send an fin_sent", utils.UnpackRDTMessage(fin_sent), self.dest_addr)
             while True:
                 if time.time() - starttime < self.timeout:
                     if thread.buffer is not None:
                         ack = thread.buffer
                         ack_upk = utils.UnpackRDTMessage(ack)
-                        ##print("get a ack, self.seq =", self.seq, ", seq_ack = ", ack_upk[5])
+                        print("get a ack, self.seq =", self.seq, ", seq_ack = ", ack_upk[5])
                         if check_package(ack, 4):
                             ack = utils.CreateRDTMessage(SYN=False, FIN=False, ACK=True, SEQ=self.seq,
                                                          SEQ_ACK=ack_upk[4] + ack_upk[6])
@@ -621,15 +633,16 @@ class RDTSocket(UnreliableSocket):
                 else:
                     starttime = time.time()
                     self.sendto(fin_sent, self.dest_addr)
-            #print("1.fin_sent is received.")
-            #print("2.fin_ack is sent.")
-            #print("3.fin_sent is sent.")
-            #print("4.fin_ack is received.")
-            #print("connection closed")
+            print("1.fin_sent is received.")
+            print("2.fin_ack is sent.")
+            print("3.fin_sent is sent.")
+            print("4.fin_ack is received.")
             return
         #############################################################################
         #                             END OF YOUR CODE                              #
         #############################################################################
+        #super().close()
+
 
     def set_send_to(self, send_to):
         self._send_to = send_to
@@ -642,3 +655,26 @@ class RDTSocket(UnreliableSocket):
 
     def __exit__(self, *args):
         self.close()
+
+
+"""
+You can define additional functions and classes to do thing such as packing/unpacking packets, or threading.
+
+"""
+
+if __name__ == '__main__':
+    clientAddress = ('127.0.0.1', 11111)
+    serverAddress = ('127.0.0.1', 1236)
+    payload = ''
+    # Create a client socket
+    clientSocket = RDTSocket()
+    clientSocket.bind(clientAddress)
+    # Create a connection request message
+    clientSocket.connect(serverAddress)
+    clientSocket.connect(serverAddress)
+    # connMsg = utils.CreateRDTMessage(SYN=True,FIN=False,ACK=False,SEQ=0,SEQ_ACK=0,Payload=payload)
+    # sendTo = clientSocket.sendto
+    # sendTo(connMsg,clientAddress)
+    # connRsp, serverAddr = clientSocket.recvfrom(4096)
+    # fmt = "<3?3ih%ds" % len(payload)
+    # print(struct.unpack(fmt, connRsp))
