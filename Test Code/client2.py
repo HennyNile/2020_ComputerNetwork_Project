@@ -40,7 +40,7 @@ if __name__=='__main__':
         for i in range(count):
             client.send(encoded)
             while len(echo) < len(encoded)*(i+1):
-                print("There are", len(client.recv_buffer), "messages in recv_buffer")
+                #print("There are", len(client.recv_buffer), "messages in recv_buffer")
                 reply = client.recv(slice_size)
                 echo += reply
 

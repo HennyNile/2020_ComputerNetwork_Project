@@ -1,7 +1,7 @@
 # Echo server program
 import socket
-from CN_rdt.rdt import RDTSocket
-from CN_rdt.utils import CreateRDTMessage,UnpackRDTMessage
+from rdt import RDTSocket
+from utils import CreateRDTMessage,UnpackRDTMessage
 import threading
 import time
 

@@ -1,5 +1,4 @@
-from CN_rdt.rdt import RDTSocket
-from socket import socket, AF_INET, SOCK_DGRAM, SOCK_STREAM
+from rdt import RDTSocket
 import time
 
 if __name__=='__main__':

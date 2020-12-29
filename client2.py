@@ -1,5 +1,4 @@
-from CN_rdt.rdt import RDTSocket
-from socket import socket, AF_INET, SOCK_STREAM
+from rdt import RDTSocket
 import time
 from difflib import Differ
 

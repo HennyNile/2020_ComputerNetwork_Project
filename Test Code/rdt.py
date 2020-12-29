@@ -150,7 +150,7 @@ class RDTSocket(UnreliableSocket):
         self.maxwinsize = 5
         self.maxmessagelen = 3000
         self.maxbuffersize = 4096
-        self.timeout = 3
+        self.timeout = 1
         self.this_fin = True
         self.this_fin_seq = None
         self.recv_bytes = b''

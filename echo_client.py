@@ -1,6 +1,6 @@
 # Echo server program
-from CN_rdt.rdt import RDTSocket
-from CN_rdt.utils import CreateRDTMessage,UnpackRDTMessage
+from rdt import RDTSocket
+from utils import CreateRDTMessage,UnpackRDTMessage
 
 
 client_addr = ('127.0.0.1',13001)         # Symbolic name meaning all available interfaces
