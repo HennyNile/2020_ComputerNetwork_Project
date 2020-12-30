@@ -262,9 +262,9 @@ class RDTSocket(UnreliableSocket):
         syn_sent = utils.CreateRDTMessage(syn_sent_h[0], syn_sent_h[1], syn_sent_h[2], SEQ=self.seq, SEQ_ACK=self.seq_ack)
         newsockaddr = None
         starttime = time.time()
+        self.sendto(syn_sent, self.dest_addr)
         thread = recvThreading(self)
         thread.start()
-        self.sendto(syn_sent,self.dest_addr)
         print(time.time())
         print("send an syn_sent in connet(), packet header is", utils.UnpackRDTMessage(syn_sent)[0:8])
         while True:
