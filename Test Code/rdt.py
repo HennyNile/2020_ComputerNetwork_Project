@@ -502,6 +502,7 @@ class RDTSocket(UnreliableSocket):
                     print("Retransmission! The first packet in sliding window needs seq_ack as",winseqack[0])
                 starttime = time.time()
                 package = winbuffer[0]
+                self.retran_cnt += 1
                 if self.retran_cnt > 3:
                     congestion_flag = True
                 self.sendto(package, self.dest_addr)
