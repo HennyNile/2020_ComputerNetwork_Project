@@ -454,20 +454,20 @@ class RDTSocket(UnreliableSocket):
         SetnewThread = False
         starttime = time.time()
         thread = None
-        timeout = self.timeout
+
         if threading.active_count()>1: # the threading left in connect()
             thread = threading.enumerate()[1]
         else:
             thread = recvThreading(self)
             thread.start()
-
+        timeout = self.timeout
         congestion_flag = False
 
         while True:
             if congestion_flag:
-                time.sleep(1)
-                starttime += 1
-                timeout += 1
+                time.sleep(timeout)
+                starttime += timeout
+                timeout *= 1.5
 
             if win_left_position == package_num:
                 break
@@ -481,7 +481,7 @@ class RDTSocket(UnreliableSocket):
                     if check_package(thread.buffer,3,self.debug):
                         congestion_flag = False
                         self.retran_cnt = 0
-                        timeout = self.timeout
+                        timeout = timeout* 0.875 + (time.time() - starttime)*0.125
                         local_message = thread.buffer
                         fields = utils.UnpackRDTMessage(local_message)
                         for i in range(win_left_position, win_right_position):
@@ -495,10 +495,10 @@ class RDTSocket(UnreliableSocket):
                         thread.buffer = None
                     else:
                         SetnewThread = True
-
             else:
                 if self.debug:
                     print(time.time())
+                    print("timeout is",timeout)
                     print("Retransmission! The first packet in sliding window needs seq_ack as",winseqack[0])
                 starttime = time.time()
                 package = winbuffer[0]
@@ -564,7 +564,7 @@ class RDTSocket(UnreliableSocket):
                 print("An fin_sent is sent in close positively, packet header is",utils.UnpackRDTMessage(fin_sent)[0:8])
             self.sendto(fin_sent, self.dest_addr)
             while True:
-                if time.time() - starttime < self.timeout*3:
+                if time.time() - starttime < self.timeout:
                     if thread.buffer is not None:
                         ack = thread.buffer
                         ack_upk = utils.UnpackRDTMessage(ack)

@@ -3,7 +3,7 @@ from socket import socket, AF_INET, SOCK_DGRAM, SOCK_STREAM
 import time
 
 if __name__=='__main__':
-    server = RDTSocket(debug=False)
+    server = RDTSocket(debug=True)
     #server = socket(AF_INET, SOCK_STREAM) # check what python socket does
     server.bind(('127.0.0.1', 9999))
     #server.listen(0) # check what python socket does
